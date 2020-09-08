@@ -1,0 +1,29 @@
+at // check status
+OK
+at+cgnspwr=1 // power gps
+OK
+AT+CGNSSEQ=RMC // configure gps standard
+AT+CGPSSTATUS?
+
+----
+AT+CPBR=1,10 // phone register
+-----
+
+at+cgnsinf // gps info coordinates
+-----
+-- check wanda data
+-- *123*10*99#
+balance enquiry - mtn
+at+cusd=1
+OK
+at+cusd=1,"*123#"
+at+cusd=1,"*123*10*99#"
+OK
+--------
+at+cops? // operator
+----
+AT+CMGS="697444072"
+
+ 
+---- serial monitor character
+Serial.write(0x1a); ctrl-z
