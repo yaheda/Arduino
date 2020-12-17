@@ -8,7 +8,7 @@ const char apn[]  = "internet";
 const char user[] = "";
 const char pass[] = "";*/
 
-#define apn "internet"
+#define apn "hologram"
 #define user ""
 #define pass ""
 
@@ -109,6 +109,7 @@ void loop() {
   };*/
   Serial.println("Sending telemetry data...");
   //tb.sendTelemetry(data, data_items);
+  tb.sendTelemetryFloat("holgram", 1);
   tb.sendTelemetryFloat("latitude", latitude);
   tb.sendTelemetryFloat("longitude", longitude);
   tb.sendTelemetryFloat("batteryLevel", batteryLevel);

@@ -52,7 +52,7 @@ class _RandomWordsState extends State<RandomWords> {
           appBar: AppBar(title: Text('Maps'),),
           body: GoogleMap(
             onMapCreated: _onMapCreated,
-            initialCameraPosition: CameraPosition(target: const LatLng(0, 0), zoom: 4),
+            initialCameraPosition: CameraPosition(target: const LatLng(0, 0), zoom: 17),
             markers: _markers.values.toSet(),
           ),
         );
@@ -61,22 +61,34 @@ class _RandomWordsState extends State<RandomWords> {
   }
 
   GoogleMapController mapController;
+  Completer<GoogleMapController> _controller = Completer();
+
+
   final LatLng _center = const LatLng(45.521563, -122.677433);
+
+  //LatLng _lastMapPosition = _center;
 
   final Map<String, Marker> _markers = {};
 
   Future<void>  _onMapCreated(GoogleMapController controller) async{
+    mapController = controller;
+
     final googleOffices = await locations.getGoogleOffices();
 
     final authenticateResponse = await authenticateToThingsBoard();
     final telemetryResponse = await getLatestTelemetry(authenticateResponse.token);
 
+    LatLng latlng = LatLng(telemetryResponse.latitude, telemetryResponse.longitude);
+
     setState(() {
       _markers.clear();
 
+
+      //latlng.longitude
+
       final marker = Marker(
         markerId: MarkerId('Tracker0'),
-        position: LatLng(telemetryResponse.latitude, telemetryResponse.longitude),
+        position: LatLng(latlng.latitude, latlng.longitude),
         infoWindow: InfoWindow(
             title: 'Tracker0',
             snippet: 'hello from cameroon'
@@ -97,6 +109,24 @@ class _RandomWordsState extends State<RandomWords> {
         _markers[office.name] = marker;
       }*/
     });
+
+    CameraUpdate cu = CameraUpdate.newLatLng(latlng);
+    this.mapController.animateCamera(cu).then((void v){
+      check(cu,this.mapController);
+    });
+
+
+  }
+
+  void check(CameraUpdate u, GoogleMapController c) async {
+    c.animateCamera(u);
+    mapController.animateCamera(u);
+    LatLngBounds l1=await c.getVisibleRegion();
+    LatLngBounds l2=await c.getVisibleRegion();
+    print(l1.toString());
+    print(l2.toString());
+    if(l1.southwest.latitude==-90 ||l2.southwest.latitude==-90)
+      check(u, c);
   }
 
   //-----
