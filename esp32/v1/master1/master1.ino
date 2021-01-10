@@ -1,123 +1,104 @@
 #include <TinyGPS++.h>
-
-const int BAUD_RATE = 9600;//115200; //9600;
-
-//HardwareSerial SerialGPS(1);
-
 #include <SoftwareSerial.h>
 
-SoftwareSerial gpsSerial(4, 3); // GPS Module’s TX to D4 & RX to D3
-TinyGPSPlus gps;
-//const int GPS_RX_PIN = 25, GPS_TX_PIN = 26;
-const int GPS_RX_PIN = 32, GPS_TX_PIN = 33;
+/* Create object named bt of the class SoftwareSerial */
+SoftwareSerial GPS_SoftSerial(4, 3);/* (Rx, Tx) */
+/* Create an object named gps of the class TinyGPSPlus */
+TinyGPSPlus gps;      
 
-int GPSBaud = 9600;
+volatile float minutes, seconds;
+volatile int degree, secs, mins;
 
 void setup() {
-  Serial.begin(BAUD_RATE);
-  gpsSerial.begin(GPSBaud);
-  Serial.println("Starting...");
+  Serial.begin(9600); /* Define baud rate for serial communication */
+  GPS_SoftSerial.begin(9600); /* Define baud rate for software serial communication */
 }
 
 void loop() {
-  delay(5000);
-  getGPS();
+        smartDelay(1000); /* Generate precise delay of 1ms */
+        unsigned long start;
+        double lat_val, lng_val, alt_m_val;
+        uint8_t hr_val, min_val, sec_val;
+        bool loc_valid, alt_valid, time_valid;
+        lat_val = gps.location.lat(); /* Get latitude data */
+        loc_valid = gps.location.isValid(); /* Check if valid location data is available */
+        lng_val = gps.location.lng(); /* Get longtitude data */
+        alt_m_val = gps.altitude.meters();  /* Get altitude data in meters */
+        alt_valid = gps.altitude.isValid(); /* Check if valid altitude data is available */
+        hr_val = gps.time.hour(); /* Get hour */
+        min_val = gps.time.minute();  /* Get minutes */
+        sec_val = gps.time.second();  /* Get seconds */
+        time_valid = gps.time.isValid();  /* Check if valid time data is available */
+        if (!loc_valid)
+        {          
+          Serial.print("Latitude : ");
+          Serial.println("*****");
+          Serial.print("Longitude : ");
+          Serial.println("*****");
+        }
+        else
+        {
+          DegMinSec(lat_val);
+          Serial.print("Latitude in Decimal Degrees : ");
+          Serial.println(lat_val, 6);
+          Serial.print("Latitude in Degrees Minutes Seconds : ");
+          Serial.print(degree);
+          Serial.print("\t");
+          Serial.print(mins);
+          Serial.print("\t");
+          Serial.println(secs);
+          DegMinSec(lng_val); /* Convert the decimal degree value into degrees minutes seconds form */
+          Serial.print("Longitude in Decimal Degrees : ");
+          Serial.println(lng_val, 6);
+          Serial.print("Longitude in Degrees Minutes Seconds : ");
+          Serial.print(degree);
+          Serial.print("\t");
+          Serial.print(mins);
+          Serial.print("\t");
+          Serial.println(secs);
+        }
+        if (!alt_valid)
+        {
+          Serial.print("Altitude : ");
+          Serial.println("*****");
+        }
+        else
+        {
+          Serial.print("Altitude : ");
+          Serial.println(alt_m_val, 6);    
+        }
+        if (!time_valid)
+        {
+          Serial.print("Time : ");
+          Serial.println("*****");
+        }
+        else
+        {
+          char time_string[32];
+          sprintf(time_string, "Time : %02d/%02d/%02d \n", hr_val, min_val, sec_val);
+          Serial.print(time_string);    
+        }
 }
 
-void getGPS() {
-  Serial.println("Setup GPS...");
-
-  //while (gpsSerial.available() > 0)
-  //  Serial.write(gpsSerial.read());
-    
-  while (gpsSerial.available() > 0){
-    //byte gpsData = gpsSerial.read();
-    //Serial.write(gpsData);
-
-    if (gps.encode(gpsSerial.read())); {
-      displayInfo();
-      delay(2000);
-    }
-  }
-
-
-  if (millis() > 5000 && gps.charsProcessed() < 10)
-  {
-    Serial.println(F("No GPS detected: check wiring."));
-    while(true);
-  }
-    
-
-  /*if (millis() > 5000 && gps.charsProcessed() < 10)
-  {
-    Serial.println(F("No GPS detected: check wiring."));
-    while(true);
-  }*/
-
-/*
-
-  SerialGPS.begin(BAUD_RATE, SERIAL_8N1, GPS_RX_PIN, GPS_TX_PIN, false);
-  delay(3000);
-
-  while (SerialGPS.available() > 0){
-    byte gpsData = SerialGPS.read();
-    Serial.write(gpsData);
-  }
-
-  if (millis() > 5000 && gps.charsProcessed() < 10)
-  {
-    Serial.println(F("No GPS detected: check wiring."));
-    while(true);
-  }*/
-}
-
-void displayInfo()
+static void smartDelay(unsigned long ms)
 {
-  Serial.print(F("Location: ")); 
-  if (gps.location.isValid())
+  unsigned long start = millis();
+  do 
   {
-    Serial.print(gps.location.lat(), 6);
-    Serial.print(F(","));
-    Serial.print(gps.location.lng(), 6);
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
+    while (GPS_SoftSerial.available())  /* Encode data read from GPS while data is available on serial port */
+      gps.encode(GPS_SoftSerial.read());
+/* Encode basically is used to parse the string received by the GPS and to store it in a buffer so that information can be extracted from it */
+  } while (millis() - start < ms);
+}
 
-  Serial.print(F("  Date/Time: "));
-  if (gps.date.isValid())
-  {
-    Serial.print(gps.date.month());
-    Serial.print(F("/"));
-    Serial.print(gps.date.day());
-    Serial.print(F("/"));
-    Serial.print(gps.date.year());
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.print(F(" "));
-  if (gps.time.isValid())
-  {
-    if (gps.time.hour() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.hour());
-    Serial.print(F(":"));
-    if (gps.time.minute() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.minute());
-    Serial.print(F(":"));
-    if (gps.time.second() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.second());
-    Serial.print(F("."));
-    if (gps.time.centisecond() < 10) Serial.print(F("0"));
-    Serial.print(gps.time.centisecond());
-  }
-  else
-  {
-    Serial.print(F("INVALID"));
-  }
-
-  Serial.println();
+void DegMinSec( double tot_val)   /* Convert data in decimal degrees into degrees minutes seconds form */
+{  
+  degree = (int)tot_val;
+  minutes = tot_val - degree;
+  seconds = 60 * minutes;
+  minutes = (int)seconds;
+  mins = (int)minutes;
+  seconds = seconds - minutes;
+  seconds = 60 * seconds;
+  secs = (int)seconds;
 }
