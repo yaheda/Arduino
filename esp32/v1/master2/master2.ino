@@ -1,3 +1,5 @@
+#define TINY_GSM_MODEM_SIM800
+
 #include <TinyGPS++.h>
 #include <TinyGsmClient.h>
 #include "ThingsBoard.h"
@@ -26,6 +28,8 @@ ThingsBoardHttp tb(client, TOKEN, THINGSBOARD_SERVER, THINGSBOARD_PORT);
 
 bool modemConnected = false;
 
+bool defaultGPS = true;
+
 void setup() {
   Serial.begin(BAUD_RATE);
   Serial.println("Starting...");
@@ -39,6 +43,7 @@ void loop() {
     return;
 
   initGPS();
+  sendTelemetry();
 }
 
 /// --- GSM ----------------------------------
@@ -96,8 +101,8 @@ void initGPS() {
   unsigned long start = millis();
   do 
   {
-    while (GPS_SoftSerial.available()) 
-      gps.encode(GPS_SoftSerial.read());
+    while (SerialGPS.available()) 
+      gps.encode(SerialGPS.read());
   } while (millis() - start < 1000);
 
   if (millis() > 5000 && gps.charsProcessed() < 10)
@@ -112,7 +117,7 @@ void initGPS() {
 /// --- TELEMETRY -------------------------------------
 
 void sendTelemetry() {
-  if (!gps.location.isValid()) {
+  if (!gps.location.isValid() && !defaultGPS) {
     Serial.print("Latitude : ");
     Serial.println("*****");
     Serial.print("Longitude : ");
@@ -121,6 +126,28 @@ void sendTelemetry() {
     return;
   }
 
+  double latitude = gps.location.lat();
+  double longitude = gps.location.lng();
+
+  if (defaultGPS) {
+    latitude = -26.052450;
+    longitude = 28.058380;
+  }
+
+  Serial.print("Latitude in Decimal Degrees : ");
+  Serial.println(latitude, 6);
+  Serial.print("Longitude in Decimal Degrees : ");
+  Serial.println(longitude, 6);
+
+  //const int data_items = 2;
+  //Telemetry data[data_items] = {
+  //  { "latitude", -26.052450 },
+  //  { "longitude", longitude },
+  //};
+
+  Serial.print("Sending Telemetry Data... ");
+  //tb.sendTelemetry(data, data_items);
   tb.sendTelemetryFloat("latitude", latitude);
   tb.sendTelemetryFloat("longitude", longitude);
+  Serial.println("OK");
 }
