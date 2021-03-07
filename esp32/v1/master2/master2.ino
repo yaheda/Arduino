@@ -90,6 +90,10 @@ bool initGSM() {
   return true;
 }
 
+void powerDownGSM() {
+  gsm.poweroff();
+}
+
 /// --- GPS ----------------------------------
 
 void setupGPS() {
