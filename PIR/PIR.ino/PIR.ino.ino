@@ -1,9 +1,22 @@
 #include <WiFi.h>
 #include <WebServer.h>
+#include "ThingsBoard.h"
+
+/// https://lastminuteengineers.com/creating-esp32-web-server-arduino-ide/
+
+#define TOKEN               "AwziTZpTlU4fpgpd5kg4"
+#define THINGSBOARD_SERVER  "demo.thingsboard.io"
+#define THINGSBOARD_PORT    80
+
+WiFiClient client;
+ThingsBoardHttp tb(client, TOKEN, THINGSBOARD_SERVER, THINGSBOARD_PORT);
 
 /* Put your SSID & Password */
 const char* ssid = "ESP32";  // Enter SSID here
 const char* password = "12345678";  //Enter Password here
+
+String wifiSsid = "SouleCottage";
+String wifiPassword = "0790527264";
 
 /* Put IP Address details */
 IPAddress local_ip(192,168,1,1);
@@ -20,6 +33,72 @@ void setup() {
   Serial.begin(115200);
   pinMode(LED1pin, OUTPUT);
 
+  setupWifi();
+  
+  randomSeed(analogRead(0));
+}
+
+void loop() {
+  //server.handleClient();
+  testTelemetry();
+  delay(1000);
+}
+
+void testTelemetry() {
+  Serial.println("Sending telemetry data...");
+  tb.sendTelemetryFloat("holgram", random(0, 15));
+  delay(1000);
+}
+
+void setupWifi() {
+  Serial.println("Disconnecting current wifi connection");
+  WiFi.disconnect();
+
+  Serial.print("SSID: ");
+  Serial.println(wifiSsid);
+  Serial.print("PASS: ");
+  Serial.println(wifiPassword);
+
+  Serial.println("WiFi.begin");
+  WiFi.begin(wifiSsid.c_str(), wifiPassword.c_str());
+
+  handleWifi();
+}
+
+bool testWifi() {
+  int c = 0;
+  Serial.println("Waiting for Wifi to connect");
+  while ( c < 20 ) {
+    if (WiFi.status() == WL_CONNECTED) {
+      return true;
+    }
+    delay(500);
+    Serial.print("*");
+    c++;
+  }
+  Serial.println("");
+  Serial.println("Connect timed out, opening AP");
+  return false;
+}
+
+void handleWifi() {
+  if (testWifi()) {
+    Serial.print("Connected to ");
+    Serial.print(wifiSsid);
+    Serial.println(" Successfully");
+  } else {
+    setupAccessPoint();
+
+    Serial.println("Waiting.");
+    while ((WiFi.status() != WL_CONNECTED)) {
+      Serial.print(".");
+      delay(100);
+      server.handleClient();
+    }
+  }
+}
+
+void setupAccessPoint() {
   WiFi.softAP(ssid, password);
   WiFi.softAPConfig(local_ip, gateway, subnet);
   delay(100);
@@ -29,17 +108,9 @@ void setup() {
   server.on("/led1off", handle_led1off);
   server.on("/settings", handleSettings);
   server.onNotFound(handle_NotFound);
-  
+
   server.begin();
   Serial.println("HTTP server started");
-}
-void loop() {
-  server.handleClient();
-  if(LED1status)
-  {digitalWrite(LED1pin, HIGH);}
-  else
-  {digitalWrite(LED1pin, LOW);}
-  
 }
 
 void handleSettings() {
