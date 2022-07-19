@@ -2,6 +2,8 @@
 #include <WebServer.h>
 #include "ThingsBoard.h"
 
+#include "MotionHelper.h"
+
 /// https://lastminuteengineers.com/creating-esp32-web-server-arduino-ide/
 
 #define TOKEN               "AwziTZpTlU4fpgpd5kg4"
@@ -29,19 +31,62 @@ uint8_t LED1pin = LED_BUILTIN;
 bool LED1status = LOW;
 
 
+const int timeSeconds = 1;
+const int motionLedPin = LED_BUILTIN;
+const int motionSensorPin = 27;
+
+unsigned long now = millis();
+unsigned long lastMotionTrigger = 0;
+boolean startMotionTimer = false;
+
+void IRAM_ATTR detectsMovement() {
+  Serial.println("Motion Detected!!");
+  digitalWrite(motionLedPin, HIGH);
+  startMotionTimer = true;
+  lastMotionTrigger = millis();
+
+  //WifiHelper::init();
+}
+
+void setupMotion() {
+  pinMode(motionSensorPin, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(motionSensorPin), detectsMovement, RISING);
+
+  pinMode(motionLedPin, OUTPUT);
+  digitalWrite(motionLedPin, LOW);
+}
+
+void pingMotion() {
+  now = millis();
+
+  if (lastMotionTrigger && (now - lastMotionTrigger > (timeSeconds * 1000))) {
+    Serial.println("Motion Stopped");
+    digitalWrite(motionLedPin, LOW);
+    lastMotionTrigger = false;
+  }
+}
+
+
 void setup() {
   Serial.begin(115200);
+
+  //EEPROM.begin(512);
+
   pinMode(LED1pin, OUTPUT);
 
   setupWifi();
   
   randomSeed(analogRead(0));
+
+  setupMotion();
 }
 
 void loop() {
   //server.handleClient();
-  testTelemetry();
-  delay(1000);
+  //testTelemetry();
+  //delay(1000);
+
+  pingMotion();
 }
 
 void testTelemetry() {

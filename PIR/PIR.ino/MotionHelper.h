@@ -1,0 +1,4 @@
+namespace MotionHelper {
+  int hello();
+
+}
