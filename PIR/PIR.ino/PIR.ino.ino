@@ -2,6 +2,8 @@
 #include <WebServer.h>
 #include "ThingsBoard.h"
 
+#include <LinkedList.h>
+
 #include "MotionHelper.h"
 
 /// https://lastminuteengineers.com/creating-esp32-web-server-arduino-ide/
@@ -39,12 +41,17 @@ unsigned long now = millis();
 unsigned long lastMotionTrigger = 0;
 boolean startMotionTimer = false;
 
+LinkedList<int> motionList = LinkedList<int>();
+int currentMotions = 0;
+unsigned long lastMotionListAddition = 0;
+
 void IRAM_ATTR detectsMovement() {
   Serial.println("Motion Detected!!");
   digitalWrite(motionLedPin, HIGH);
   startMotionTimer = true;
   lastMotionTrigger = millis();
 
+  currentMotions++;
   //WifiHelper::init();
 }
 
@@ -63,7 +70,23 @@ void pingMotion() {
     Serial.println("Motion Stopped");
     digitalWrite(motionLedPin, LOW);
     lastMotionTrigger = false;
+
+    
   }
+
+  if (lastMotionListAddition && (now - lastMotionTrigger > (timeSeconds * 1000 * 15))) {
+    Serial.println("New List Item");
+
+    if (tb.connected()) {
+      tb.sendTelemetryFloat("motions", currentMotions);
+      tb.sendTelemetryFloat("motionsStep", currentMotions);
+      currentMotions = 0;
+    }
+
+    //myList.add(currentMotions);
+  }
+
+  delay(1000);
 }
 
 
